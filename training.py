@@ -9,6 +9,9 @@ from cnn_model import CNN
 
 
 class TrainHistory:
+    """ Save information during training
+    """
+    epochs = int
     device = str
     best_loss = float
     val_loss = float
@@ -16,8 +19,10 @@ class TrainHistory:
     val_losses = list
     train_accuracies = list
     val_accuracies = list
+    trained_model = str
 
-    def __init__(self):
+    def __init__(self, num_epochs, new_model_path):
+        self.epochs = num_epochs
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.best_loss = float('inf')
         self.val_loss = 0
@@ -25,12 +30,13 @@ class TrainHistory:
         self.val_losses = []
         self.train_accuracies = []
         self.val_accuracies = []
+        self.trained_model = new_model_path
 
 
-def plot_training_history(result_data):
-    """Visualize training history
-    :param :
-    :return:
+def plot_training_history(result_data: TrainHistory) -> None:
+    """ Visualize training history in a graphic
+    :param result_data: Class to track training history
+    :return: None
     """
     plt.figure(figsize=(12, 6))
     plt.subplot(1, 2, 1)
@@ -51,30 +57,13 @@ def plot_training_history(result_data):
     plt.show()
 
 
-def find_label_classes(classes: list[str]) -> list[str]:
-    """
-    :param :
-    :return:
-    """
-    print('classes loaded in train dataset: ' + str(classes))
-    return classes
+def training(cnn_model: nn.Module, training_class: TrainHistory, train_dataloader: torch.utils.data,
+             optimizer: torch.optim, criterion: torch.nn.Module) -> None:
+    """ Train the model and save the values in the TrainHistory class
 
-
-def find_number_of_classes(classes: list[str]) -> int:
-    """
-    :param :
-    :return:
-    """
-    print('Working with ' + str(len(classes)) + ' classes')
-    return len(classes)
-
-
-def training(cnn_model, train_class, train_dataloader, optimizer, criterion):
-    """
-
-    :param cnn_model:
-    :param train_class:
-    :param train_dataloader:
+    :param cnn_model: CNN to train
+    :param training_class: class to track training history
+    :param train_dataloader: Batch of data loaded from the test dataset
     :param optimizer:
     :param criterion:
     :return: None
@@ -84,7 +73,7 @@ def training(cnn_model, train_class, train_dataloader, optimizer, criterion):
     correct = 0
     total = 0
     for batch_idx, (inputs, labels) in enumerate(train_dataloader):
-        inputs, labels = inputs.to(train_class.device), labels.to(train_class.device)
+        inputs, labels = inputs.to(training_class.device), labels.to(training_class.device)
         optimizer.zero_grad()
         outputs = cnn_model(inputs)
         loss = criterion(outputs, labels)
@@ -95,20 +84,21 @@ def training(cnn_model, train_class, train_dataloader, optimizer, criterion):
         total += labels.size(0)
         correct += (predicted == labels).sum().item()
     train_accuracy = correct / total
-    train_class.train_losses.append(train_loss)
-    train_class.train_accuracies.append(train_accuracy)
+    training_class.train_losses.append(train_loss)
+    training_class.train_accuracies.append(train_accuracy)
 
 
-def validation(cnn_model, train_class, test_dataloader, criterion):
-    """
+def validation(cnn_model: nn.Module, training_class: TrainHistory, test_dataloader: torch.utils.data,
+               criterion: torch.nn.Module) -> None:
+    """ Evaluate the performance during training using the test dataset and
+    save the values in the TrainHistory class
 
-    :param cnn_model:
-    :param train_class:
-    :param test_dataloader:
+    :param cnn_model: CNN to train
+    :param training_class: class to track training history
+    :param test_dataloader: Batch of data loaded from the test dataset
     :param criterion:
     :return: None
     """
-    # Validation
     cnn_model.eval()
     val_loss = 0.0
     correct = 0
@@ -116,7 +106,7 @@ def validation(cnn_model, train_class, test_dataloader, criterion):
 
     with torch.no_grad():
         for inputs, labels in test_dataloader:
-            inputs, labels = inputs.to(train_class.device), labels.to(train_class.device)
+            inputs, labels = inputs.to(training_class.device), labels.to(training_class.device)
             outputs = cnn_model(inputs)
             loss = criterion(outputs, labels)
             val_loss += loss.item()
@@ -125,63 +115,66 @@ def validation(cnn_model, train_class, test_dataloader, criterion):
             correct += (predicted == labels).sum().item()
     val_loss /= len(test_dataloader)
     val_accuracy = correct / total
-    train_class.val_losses.append(val_loss)
-    train_class.val_accuracies.append(val_accuracy)
+    training_class.val_losses.append(val_loss)
+    training_class.val_accuracies.append(val_accuracy)
 
 
-def train_model(cnn_model, train_dataloader, test_dataloader, number_epochs, new_model_path):
+def train_model(cnn_model: nn.Module, train_dataloader: DataLoader, test_dataloader: DataLoader,
+                training_class: TrainHistory) -> None:
+    """ Train the CNN, saving the train history to plot it
 
+    :param cnn_model: CNN to train
+    :param train_dataloader: Batch of data loaded from the train dataset
+    :param test_dataloader: Batch of data loaded from the test dataset
+    :param training_class: class to track training history
+    :return: None
+    """
     optimizer = optim.Adam(cnn_model.parameters(), lr=0.0002)
     criterion = nn.CrossEntropyLoss()
-    train_class = TrainHistory()
-    print(f"Using {train_class.device} device")
-    cnn_model.to(train_class.device)
-    # Training loop
-    print(f"{number_epochs} epochs ")
-    for epoch in range(number_epochs):
-
-        training(cnn_model, train_class, train_dataloader, optimizer, criterion)
-
-        validation(cnn_model, train_class, test_dataloader, criterion)
-
-        print(f'Epoch [{epoch + 1}/{number_epochs}], '
-              f'Training Loss: {train_class.train_losses[-1]:.4f}, '
-              f'Training Accuracy: {train_class.train_accuracies[-1]:.2%}, '
-              f'Validation Loss: {train_class.val_losses[-1]:.4f}, '
-              f'Validation Accuracy: {train_class.val_accuracies[-1]:.2%}')
+    print(f"Using {training_class.device} device")
+    cnn_model.to(training_class.device)
+    print(f"Starting training with {training_class.epochs} epochs...")
+    for epoch in range(training_class.epochs):
+        training(cnn_model, training_class, train_dataloader, optimizer, criterion)
+        validation(cnn_model, training_class, test_dataloader, criterion)
+        print(f'Epoch [{epoch + 1}/{training_class.epochs}], '
+              f'Training Loss: {training_class.train_losses[-1]:.4f}, '
+              f'Training Accuracy: {training_class.train_accuracies[-1]:.2%}, '
+              f'Validation Loss: {training_class.val_losses[-1]:.4f}, '
+              f'Validation Accuracy: {training_class.val_accuracies[-1]:.2%}')
         # Save model
-        if train_class.val_losses[-1] < train_class.best_loss:
-            train_class.best_loss = train_class.val_losses[-1]
-            torch.save(cnn_model.state_dict(), new_model_path)
-    plot_training_history(train_class)
+        if training_class.val_losses[-1] < training_class.best_loss:
+            training_class.best_loss = training_class.val_losses[-1]
+            torch.save(cnn_model.state_dict(), training_class.trained_model)
+    plot_training_history(training_class)
 
 
 def training_model(train_dataset_path: str, test_dataset_path: str, image_size: tuple, number_epochs: int,
                    new_model_path: str):
-    """
+    """Train the CNN, load a batch from the dataset to train the model,
+    find classes and number of classes to train the model
 
-    :param train_dataset_path:
-    :param test_dataset_path:
-    :param image_size:
-    :param number_epochs:
-    :param new_model_path:
-    :return:
+    :param train_dataset_path: Directory path of training dataset
+    :param test_dataset_path: Directory path of test dataset
+    :param image_size: Tuple with values to resize images in dataset
+    :param number_epochs: Number of repetitions for the training loop
+    :param new_model_path: string with the name of the new model to save
+    :return: None
     """
     train_dataset = load_dataset(train_dataset_path, image_size)
-    train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+    train_dataloader = DataLoader(train_dataset, batch_size=64, shuffle=True)
     test_dataset = load_dataset(test_dataset_path, image_size)
-    test_dataloader = DataLoader(test_dataset, batch_size=32, shuffle=False)
-    labels_classes = find_label_classes(train_dataset.classes)
-    print(f"{labels_classes} classes loaded in train dataset ")
-    num_classes = find_number_of_classes(labels_classes)
+    test_dataloader = DataLoader(test_dataset, batch_size=64, shuffle=False)
+    num_classes = len(train_dataset.classes)
     cnn_model = CNN(num_classes)
-    train_model(cnn_model, train_dataloader, test_dataloader, number_epochs, new_model_path)
+    training_class = TrainHistory(number_epochs, new_model_path)
+    train_model(cnn_model, train_dataloader, test_dataloader, training_class)
 
 
 if __name__ == "__main__":
     training_dataset_path = os.path.abspath('./dataset/Training')
     testing_dataset_path = os.path.abspath('./dataset/Testing')
     target_image_size = (224, 224)
-    epochs = 2
+    epochs = 15
     model_path = './brain_tumor_classifier.pth'
     training_model(training_dataset_path, testing_dataset_path, target_image_size, epochs, model_path)
