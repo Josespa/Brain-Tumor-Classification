@@ -1,28 +1,64 @@
+import torch
+import sklearn.metrics
 import numpy as np
 import matplotlib.pyplot as plt
-import itertools
 
 
-def show_images(dataloader_images, labels_classes):
-    images, labels = next(iter(dataloader_images))
-    # Convert images to numpy arrays and denormalize
-    images = (images.numpy().transpose((0, 2, 3, 1)) * [0.229, 0.224, 0.225] + [0.485, 0.456, 0.406]).clip(0, 1)
-    # Create a grid of images
-    num_images = len(images)
-    rows = int(np.ceil(num_images / 4))
-    fig, axes = plt.subplots(rows, 4, figsize=(10, 10))
-    # Plot images with labels
+def denormalize_as_numpy_arrays(images: torch.Tensor) -> np.array:
+    """ Denormalizes images to numpy arrays.
+
+    :param images: Images as tensors to be denormalized
+    :return: Array of denormalized images
+    """
+    return (images.numpy().transpose((0, 2, 3, 1)) * [0.229, 0.224, 0.225] + [0.485, 0.456, 0.406]).clip(0, 1)
+
+
+def get_number_of_images_to_show(images: torch.Tensor) -> int:
+    """ Returns numbers the length of the array or 16 as the max value.
+
+    :param images: Images to show
+    :return: Number of images to show
+    """
+    return len(images) if len(images) < 16 else 16
+
+
+def get_number_of_rows(num_images: int) -> int:
+    """ Returns number of rows for the grid.
+
+    :param num_images: Number of images to show
+    :return: Integer number of rows
+    """
+    return int(num_images / 4)
+
+
+def show_images(batch_images: torch.utils, classes: list[str]) -> None:
+    """ Show images in the batch.
+
+    Show a maximum of 16 images per batch.
+
+    :param batch_images: Iterable sample of data from dataset
+    :param classes: List of classes in the dataset
+    :return: None
+    """
+    images, labels = next(iter(batch_images))
+    images = denormalize_as_numpy_arrays(images)
+    num_images = get_number_of_images_to_show(images)
+    number_of_rows = get_number_of_rows(num_images)
+    fig, axes = plt.subplots(number_of_rows, 4, figsize=(10, 10))
     for i, ax in enumerate(axes.flat):
         if i < num_images:
             ax.imshow(images[i])
-            ax.set_title(f'Label: {labels_classes[labels[i]]}')
+            ax.set_title(f'Label: {classes[labels[i]]}')
         ax.axis('off')
     plt.tight_layout()
     plt.show()
 
 
-def plot_training_history(result_data) -> None:
-    """ Visualize training history in a graphic
+def show_training_history(result_data) -> None:
+    """ Graph of the training history.
+
+    Shows a graph with the Loss history and Accuracy history.
+    
     :param result_data: Class to track training history
     :return: None
     """
@@ -45,27 +81,13 @@ def plot_training_history(result_data) -> None:
     plt.show()
 
 
-def show_confusion_matrix(evaluating_class) -> None:
-    """ Visualize confusion matrix
-    :param evaluating_class: class to track evaluation performance
+def show_confusion_matrix(result_cm_display: sklearn.metrics) -> None:
+    """ Heat map of the confusion matrix.
+
+    Display the resulting confusion matrix.
+
+    :param result_cm_display: Confusion matrix
     :return: None
     """
-    plt.figure(figsize=(10, 7))
-    plt.grid(False)
-    plt.imshow(evaluating_class.conf_matrix, interpolation='nearest', cmap='Blues')
-    plt.title('Confusion matrix')
-    plt.colorbar()
-    tick_marks = np.arange(len(evaluating_class.labels_classes))
-    plt.xticks(tick_marks, [f"{key}" for key in evaluating_class.labels_classes], rotation=45)
-    plt.yticks(tick_marks, [f"{key}" for key in evaluating_class.labels_classes])
-    thresh = evaluating_class.conf_matrix.max() / 2.
-    for i, j in itertools.product(range(evaluating_class.conf_matrix.shape[0]),
-                                  range(evaluating_class.conf_matrix.shape[1])):
-        plt.text(j, i, f"{evaluating_class.conf_matrix[i, j]}\n{evaluating_class.conf_matrix[i, j] /
-                                                                np.sum(evaluating_class.conf_matrix) * 100:.2f}%",
-                 horizontalalignment="center",
-                 color="white" if evaluating_class.conf_matrix[i, j] > thresh else "black")
-    plt.ylabel('Actual')
-    plt.xlabel('Predicted')
-    plt.tight_layout()
+    result_cm_display.plot(cmap="PuBu")
     plt.show()
