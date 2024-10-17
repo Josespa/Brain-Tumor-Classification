@@ -1,18 +1,19 @@
 # Brain-Tumor-Classification
 
-The detection of brain tumors is a task of great importance for the early diagnosis and treatment planning of patients with neurological conditions. A deep learning-based approach is proposed for automated classification using a CNN, by training the model with a dataset of labeled MRI scans to learn the patterns associated with brain tumors, is expected to get a classifier capable distinguishing between tumor and non-tumor images. Evaluating results using Scikit-learn. 
+The detection of brain tumors is a task of great importance for the early diagnosis and treatment planning of patients with neurological conditions. However, manual interpretation of brain Magnetic Resonance Image scans requires professional expertise and can be time-consuming. Nowadays, using machine learning and deep learning in specific, it is possible to aid professionals to identify brain tumors more reliably. In this study, a deep learning-based approach is proposed for automated classification using Convolutional Neural Networks, by training the model wich learn the patterns associated with brain tumors from a dataset of labeled MRI scans, is expected to get a classifier capable distinguishing between healthy and unhealthy images. The proposed solution includes preprocessing techniques such as normalization, the design of a deep network with three convolutional layers and two linear layers in order to get a classifier of brain tumors, and the evaluation of the model through accuracy, precision, recall, and F1-score metrics. The ultimate goal is to develop a classifier capable of assisting professionals by providing consistent and accurate tumor detection, improving diagnostic speed and precision, and contributing to more timely treatment planning by analyzing how the CNN works and process medical images to evaluate the accuracy of brain tumor diagnosis. 
 
-## Requirements
+## Build on
 
 - Python 3.12.2
-- Pytorch 2.2.2
-- Scikit-learn 1.4.2 
-- Numpy 1.26.3 
-- Matplotlib 3.8.4
 
+## Installation
+
+```bash
+pip install -r requirements.txt
+```
 
 ## Data availability
 
 Te dataset is shared open source. 
-Availability Link: 
-https://doi.org/https://doi.org/10.34740/kaggle/dsv/1183165.
+
+Bhuvaji, S,. Kadam, A., Bhumkar, P., Dedge, S., and Kanchan, S. (2020). Brain Tumor Classification (MRI). Kaggle. https://doi.org/10.34740/KAGGLE/DSV/1183165
