@@ -17,7 +17,7 @@ class TrainingHistory:
     optimizer = torch.optim
     loss_fn = torch.nn.Module
     device = str
-    best_accuracy = float
+    min_validation_loss = float
     val_loss = float
     train_losses = list
     val_losses = list
@@ -31,7 +31,7 @@ class TrainingHistory:
         self.optimizer = optimizer
         self.loss_fn = loss_fn
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.best_accuracy = 0
+        self.min_validation_loss = float('inf')
         self.val_loss = 0
         self.train_losses = []
         self.val_losses = []
@@ -122,14 +122,14 @@ def print_train_history(train_history: TrainingHistory, epoch: int) -> None:
 def save_best_model(train_history: TrainingHistory, name_model_to_save: str) -> None:
     """ Save the best model in the model folder.
 
-    Save the model with the best evaluation based on validation accuracy.
+    Save the model with the best evaluation based on validation loss.
 
     :param train_history: Class to track training history
     :param name_model_to_save: Name of the model to save
     :return: None
     """
-    if train_history.val_accuracies[-1] > train_history.best_accuracy:
-        train_history.best_accuracy = train_history.val_accuracies[-1]
+    if train_history.val_losses[-1] < train_history.min_validation_loss:
+        train_history.min_validation_loss = train_history.val_losses[-1]
         directory_to_save = get_models_directory(name_model_to_save)
         torch.save(train_history.cnn_model.state_dict(), directory_to_save)
 
